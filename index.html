@@ -14,7 +14,7 @@
     <h1>this is a canvas</h1>
     <canvas id="canvas" width="256" height="256"></canvas>
     <script>
-        let cav = document.querySelector("#canvas")
+        let cav = document.querySelector("#canvas");
         let ctx = cav.getContext("2d");
         
         const drawCell = (text, x, y, isInitial=false) => {
@@ -143,17 +143,27 @@
         
         WheelManager.registerOnScrollHandler(console.info);
 
-        /////
+        /////////////////////////////////////////////////////////////////
         class _Shape {
           x = 0.
           y = 0.
           w = -1.
           h = -1.
+          scale = 1.;
           r = -1.
+          font = null;
         };
 
         class _GrafcetShape extends _Shape {
+          isSelected = false;
+
           draw = () => { };
+          move = (x, y) => {
+            this.x += x;
+            this.y += y;
+          };
+          select = () => { this.isSelected = true; };
+
         };
 
         class State extends _GrafcetShape {
@@ -161,6 +171,7 @@
           isActivated = false;
           tag = "";
           action = null;
+          grafcet = null;
 
           constructor(tag, x, y, isInitial=false) {
             super();
@@ -168,7 +179,33 @@
             this.x = x;
             this.y = y;
             this.inInitial = isInitial;
+
+            this.w = 50;
+            this.font = "10px sans-serif";
           }
+          draw = () => {
+            let x = this.grafcet.x + this.x,
+                y = this.grafcet.y + this.y;
+            console.log("draw the state: ", this.tag);
+
+            let w = this.grafcet.scale * this.w;
+            if(this.isSelected) {
+              ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+              ctx.fillRect(x-.6*w, y-.6*w, 1.2*w, 1.2*w);
+            }
+            ctx.fillStyle = "#FFFFFF";
+            ctx.strokeStyle = "#000000";
+            ctx.fillRect(x-.5*w, y-.5*w, w, w);
+            ctx.rect(x-.5*w, y-.5*w, w, w);
+            if(this.inInitial) {
+              let innerW = w * .8;
+              ctx.fillRect(x-.5*innerW, y-.5*innerW, innerW, innerW);
+              ctx.rect(x-.5*innerW, y-.5*innerW, innerW, innerW);
+            }
+            ctx.stroke();
+
+            ctx.strokeText(this.tag, x-(2.5*this.tag.length), y+2.5);
+          };
         }
 
         class Action extends _GrafcetShape {
@@ -210,8 +247,50 @@
           }
         };
 
+        class Grafcet extends _GrafcetShape {
+          initialState = null;
+          
+          states = [];
 
+          draw = () => {
+            for(let s of this.states) {
+              s.draw();
+            }
+          };
 
+          addAState = (state) => {
+            if(this.states.includes(state)) {
+              console.warn("duplicated state");
+              return;
+            }
+
+            state.grafcet = this;
+            if(this.initialState == null) {
+              this.initialState = state;
+            }
+            this.states.push(state);
+          };
+
+        };
+
+        ///// test /////
+        let g = new Grafcet();
+        // g.addAState(new State("00", 0, 0, true));
+        let s0 = new State("00", 0, 0, true);
+        g.addAState(s0);
+        g.move(60, 60);
+        g.addAState(new State("01", 0, 100));
+
+        g.states.forEach(s => s.select())
+        g.draw();
+
+        // DragManager.registerDragEndHandler((delta) => {
+        //   ctx.restore();
+        //   ctx.translate(delta.x, delta.y);
+        //   ctx.save();
+        //   ctx.clearRect(-256, -256, 512, 512);
+        //   g.draw();
+        // });
 
 
 
