@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        #canvas {
+            border: #000 1px dashed;
+        }
+    </style>
 </head>
 <body>
     <h1>this is a canvas</h1>
     <canvas id="canvas" width="256" height="256"></canvas>
     <script>
-        let ctx = document.querySelector("#canvas").getContext("2d");
+        let cav = document.querySelector("#canvas")
+        let ctx = cav.getContext("2d");
         
         const drawCell = (text, x, y, isInitial=false) => {
             ctx.rect(x-25, y-25, 50, 50)
@@ -22,7 +28,193 @@
 
         drawCell("50", 155, 155, true);
 
+        const dot = (x, y) => {
+            // ctx.reset()
+            // ctx.moveTo(x,y);
+            // ctx.arc(x, y, 1, 0, 6.28);
+            ctx.fillRect(x, y, 2.5, 2.5)
+            // ctx.stroke()
+        };
+
+
+        const line = (x, y, x2, y2) => {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.closePath();
+        };
+
+        const drawAxis = (x, y, length=256) => {
+          let WIDTH = length, HEIGHT = length;
+          line(-WIDTH, y, WIDTH, y);
+          line(x, -HEIGHT, x, HEIGHT);
+        };
+        const drawOrigin = () => {
+          drawAxis(0, 0);
+        };
+
+        class _DragManager{
+          start = {
+            x: 0.,
+            y: 0.
+          }
+          _handlers = {
+            dragStart: () => {console.log("drag start")},
+            draging: () => {},
+            dragEnd: (delta) => {console.log(delta)}
+          }
+          constructor() {
+            document.addEventListener("DOMContentLoaded", () => {
+              cav.addEventListener("mousedown", this._dragStart);
+            });
+          }
+          _dragStart = (e) => {
+            event.preventDefault();
+            cav.addEventListener("mousemove", this._drag);
+            cav.addEventListener("mouseup", this._dragEnd);
+            
+            this.start.x = e.offsetX;
+            this.start.y = e.offsetY;
+
+            this._handlers.dragStart(e)
+          };
+          _drag = (e) => {
+            const delta = this.getDelta(e);
+            this._handlers.draging(delta);
+          }
+          _dragEnd = (e) => {
+            cav.removeEventListener("mousemove", this._drag);
+            cav.removeEventListener("mouseup", this._dragEnd);
+            
+            const delta = this.getDelta(e);
+            // console.log(delta)
+            this._handlers.dragEnd(delta);
+          }
+          getDelta = (e) => {
+            return {
+              x: e.offsetX - this.start.x,
+              y: e.offsetY - this.start.y
+            }
+          };
+          registerDragStartHandler = (f) => {
+            this._handlers.dragStart = f
+          };
+          registerDragingHandler = (f) => {
+            this._handlers.draging = f
+          };
+          registerDragEndHandler = (f) => {
+            this._handlers.dragEnd = f
+          };
+        };
+
+        let DragManager = new _DragManager();
+
+        DragManager.registerDragingHandler(({x, y}) => {
+          ctx.clearRect(-256, -256, 512, 512);
+          drawAxis(x, y);
+        });
+        DragManager.registerDragEndHandler((delta) => {
+          ctx.restore();
+          ctx.translate(delta.x, delta.y);
+          ctx.save();
+          ctx.clearRect(-256, -256, 512, 512);
+          drawOrigin();
+        });
         
+        class _WheelManager {
+          _handlers = {
+            onScroll: () => {},
+          }
+          constructor() {
+            document.addEventListener("DOMContentLoaded", () => {
+              cav.addEventListener("wheel", this._scroll);
+            });
+          }
+          _scroll = (e) => {
+            let delta = e.deltaY;
+            this._handlers.onScroll(delta);
+          };
+          registerOnScrollHandler = (f) => {
+            this._handlers.onScroll = f;
+          };
+        };
+        let WheelManager = new _WheelManager();
+        
+        WheelManager.registerOnScrollHandler(console.info);
+
+        /////
+        class _Shape {
+          x = 0.
+          y = 0.
+          w = -1.
+          h = -1.
+          r = -1.
+        };
+
+        class _GrafcetShape extends _Shape {
+          draw = () => { };
+        };
+
+        class State extends _GrafcetShape {
+          inInitial = false;
+          isActivated = false;
+          tag = "";
+          action = null;
+
+          constructor(tag, x, y, isInitial=false) {
+            super();
+            this.tag = tag;
+            this.x = x;
+            this.y = y;
+            this.inInitial = isInitial;
+          }
+        }
+
+        class Action extends _GrafcetShape {
+          tag = "";
+          fromState = null;
+
+          constructor(fromState) {
+            super();
+            this.fromState = fromState;
+          }
+        };
+
+        class _SubGrafcet extends Action {  // ???
+          // pass
+        };
+
+        class Condition extends _GrafcetShape {
+          fromState = null;
+          toState = null;
+          conditionHandler = () => 1;
+
+          constructor(fromState, toState, conditionHandler =()=>1) {
+            super();
+            this.fromState = fromState;
+            this.toState = toState;
+            this.conditionHandler = conditionHandler;
+          }
+        };
+
+        class ANDCondition extends Condition {
+          fromStates = [];
+          toStates = [];
+          conditionHandler = () => 1;
+
+          constructor(fromStates, toStates, conditionHandler =()=>1) {
+            this.fromStates = fromStates;
+            this.toStates = toStates;
+            this.conditionHandler = conditionHandler;
+          }
+        };
+
+
+
+
+
+
     </script>
 </body>
 </html>
