@@ -16,26 +16,6 @@
     <script>
         let cav = document.querySelector("#canvas");
         let ctx = cav.getContext("2d");
-        
-        const drawCell = (text, x, y, isInitial=false) => {
-            ctx.rect(x-25, y-25, 50, 50)
-            if(isInitial) {
-                ctx.rect(x-25+5, y-25+5, 50-10, 50-10)
-            }
-            ctx.strokeText(text, x-2.5*text.length, y+2.5, 35)
-            ctx.stroke()
-        };
-
-        drawCell("50", 155, 155, true);
-
-        const dot = (x, y) => {
-            // ctx.reset()
-            // ctx.moveTo(x,y);
-            // ctx.arc(x, y, 1, 0, 6.28);
-            ctx.fillRect(x, y, 2.5, 2.5)
-            // ctx.stroke()
-        };
-
 
         const line = (x, y, x2, y2) => {
           ctx.beginPath();
@@ -70,7 +50,7 @@
             });
           }
           _dragStart = (e) => {
-            event.preventDefault();
+            e.preventDefault();
             cav.addEventListener("mousemove", this._drag);
             cav.addEventListener("mouseup", this._dragEnd);
             
@@ -80,10 +60,14 @@
             this._handlers.dragStart(e)
           };
           _drag = (e) => {
+            e.preventDefault();
+
             const delta = this.getDelta(e);
             this._handlers.draging(delta);
           }
           _dragEnd = (e) => {
+            e.preventDefault();
+
             cav.removeEventListener("mousemove", this._drag);
             cav.removeEventListener("mouseup", this._dragEnd);
             
@@ -184,9 +168,10 @@
             this.font = "10px sans-serif";
           }
           draw = () => {
-            let x = this.grafcet.x + this.x,
-                y = this.grafcet.y + this.y;
-            console.log("draw the state: ", this.tag);
+            ctx.beginPath();
+            let x = this.grafcet.x + this.x*this.grafcet.scale,
+                y = this.grafcet.y + this.y*this.grafcet.scale;
+            // console.log("draw the state: ", this.tag);
 
             let w = this.grafcet.scale * this.w;
             if(this.isSelected) {
@@ -205,6 +190,7 @@
             ctx.stroke();
 
             ctx.strokeText(this.tag, x-(2.5*this.tag.length), y+2.5);
+            ctx.closePath();
           };
         }
 
@@ -275,7 +261,7 @@
 
         ///// test /////
         let g = new Grafcet();
-        // g.addAState(new State("00", 0, 0, true));
+        g.addAState(new State("00", 0, 0, true));
         let s0 = new State("00", 0, 0, true);
         g.addAState(s0);
         g.move(60, 60);
@@ -283,16 +269,42 @@
 
         g.states.forEach(s => s.select())
         g.draw();
-
-        // DragManager.registerDragEndHandler((delta) => {
-        //   ctx.restore();
-        //   ctx.translate(delta.x, delta.y);
-        //   ctx.save();
-        //   ctx.clearRect(-256, -256, 512, 512);
-        //   g.draw();
-        // });
+        drawAxis(128, 128, 256);
 
 
+        let a = 1, d = 1, b = 0, c = 0, e = -0, f = -0;
+        DragManager.registerDragingHandler(({x, y}) => {
+          ctx.setTransform(a, b, c, d, e+x, f+y);
+          console.log(x, y)
+          ctx.clearRect(-256, -256, 512, 512);
+          g.draw();
+        });
+
+        DragManager.registerDragEndHandler(({x, y}) => {
+          let mat = ctx.getTransform();
+          e = mat.e, f = mat.f;
+          // console.log(mat.e, mat.f)
+          // ctx.setTransform(a, b, c, d, e, f);
+          ctx.clearRect(-256, -256, 512, 512);
+          g.draw();
+        });
+
+        WheelManager.registerOnScrollHandler((delta) => {
+          ctx.clearRect(0, 0, 256, 256);
+          if(delta >= 0) {
+            a += 0.2;  d += 0.2;
+          }else {
+            a -= 0.2;  d -= 0.2;
+          }
+          // ctx.transform(a, b, c, d, a*e, d*f);
+          ctx.setTransform(a, b, c, d, e, f);
+          console.log(a, d);
+          // ctx.fillStyle = "#00FF00";
+          // ctx.fillRect(128, 128, 10, 10);
+          // ctx.fill()
+          g.draw();
+          drawAxis(128, 128, 256);
+        });
 
     </script>
 </body>
